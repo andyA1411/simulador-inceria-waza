@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Avanzado: Momento de Inercia y Fricción de Fluidos</title>
+    <style>
+        :root {
+            --bg-color: #0b132b;
+            --card-bg: #1c2541;
+            --accent-blue: #3a86ef;
+            --accent-orange: #f77f00;
+            --text-main: #edf2f4;
+            --text-sub: #8d99ae;
+            --border-color: #2b2d42;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 10px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        header { text-align: center; margin-bottom: 10px; }
+        h1 { margin: 0 0 3px 0; color: #4cc9f0; font-size: 1.6rem; }
+        p.subtitle { margin: 0; color: var(--text-sub); font-size: 0.85rem; }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+            background: var(--card-bg);
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            color: var(--text-sub);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active { background: var(--accent-blue); color: #fff; }
+
+        .main-container {
+            display: flex;
+            gap: 15px;
+            max-width: 1200px;
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .canvas-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        canvas { background: #080e21; border-radius: 6px; display: block; }
+
+        .controls-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            width: 330px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-sizing: border-box;
+        }
+
+        .control-group { display: flex; flex-direction: column; gap: 4px; }
+        label { font-size: 0.8rem; color: var(--text-sub); font-weight: 500; }
+        .val-badge { color: #4cc9f0; font-weight: bold; }
+
+        select, input[type="range"] {
+            width: 100%;
+            padding: 6px;
+            background: #080e21;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 0.85rem;
+        }
+
+        .sphere-card {
+            background: #131b2e;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        .sphere-card.orange { border-left-color: var(--accent-orange); }
+
+        .sphere-title {
+            font-weight: bold;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            margin-top: 6px;
+            background: #080e21;
+            padding: 6px;
+            border-radius: 4px;
+        }
+
+        .stats-grid div span { color: #fff; font-weight: 600; }
+
+        .action-btns { display: flex; gap: 8px; margin-top: 4px; }
+
+        button.btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-primary { background: var(--accent-blue); color: #fff; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-secondary { background: #374151; color: #fff; }
+        .btn-secondary:hover { background: #4b5563; }
+        .btn-danger { background: #ef4444; color: #fff; }
+        .btn-danger:hover { background: #dc2626; }
+
+        .data-panel {
+            max-width: 1200px;
+            width: 100%;
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            margin-top: 12px;
+            box-sizing: border-box;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 900px) { .data-grid { grid-template-columns: 1fr; } }
+
+        .table-container {
+            max-height: 180px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: #080e21;
+        }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: center; }
+        th, td { padding: 6px 8px; border-bottom: 1px solid var(--border-color); border-right: 1px solid rgba(43, 45, 66, 0.5); }
+        th { background: #131b2e; color: #4cc9f0; position: sticky; top: 0; z-index: 2; }
+        tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+
+        .status-tag { font-size: 0.8rem; padding: 3px 6px; border-radius: 4px; background: #374151; color: #fff; }
+        .status-ready { background: #10b981; }
+        .status-running { background: #3b82f6; }
+        .status-finished { background: #8b5cf6; }
+        .status-stopped { background: #ef4444; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Simulador de Momento de Inercia y Fricción</h1>
+        <p class="subtitle">Laboratorio virtual para el estudio de la dinámica de rotación y resistencia de fluidos</p>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" id="tab1" onclick="switchMode(1)">Idea 1: Carrera en Plano Inclinado</button>
+        <button class="tab-btn" id="tab2" onclick="switchMode(2)">Idea 2: Rotor / Péndulo Torsional</button>
+    </div>
+
+    <div class="main-container">
+        <div class="canvas-card">
+            <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-weight:bold; font-size:0.85rem;" id="simTitle">Visualización: Plano Inclinado</span>
+                <span class="status-tag status-ready" id="statusTag">Listo para Iniciar</span>
+            </div>
+            <canvas id="simCanvas" width="750" height="360"></canvas>
+        </div>
+
+        <div class="controls-card">
+            <h3 style="margin:0; font-size:0.95rem; color:#4cc9f0;">⚙️ Parámetros</h3>
+
+            <div id="controlsMode1">
+                <div class="control-group">
+                    <label>Inclinación de la Rampa (θ): <span class="val-badge" id="angleVal">30</span>°</label>
+                    <input type="range" id="angleRange" min="10" max="60" value="30">
+                </div>
+            </div>
+
+            <div id="controlsMode2" style="display:none;">
+                <div class="control-group">
+                    <label>Impulso Inicial (Torque N·m): <span class="val-badge" id="torqueVal">15</span></label>
+                    <input type="range" id="torqueRange" min="5" max="50" value="15">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label><input type="checkbox" id="airFrictionToggle" checked> Activar Resistencia del Aire (Fluido)</label>
+            </div>
+
+            <div class="sphere-card">
+                <div class="sphere-title" style="color:#38bdf8;"><span>Objeto 1 (Azul)</span></div>
+                <div class="control-group">
+                    <label>Radio / Volumen: <span class="val-badge" id="r1Val">0.30</span> m</label>
+                    <input type="range" id="r1Range" min="0.10" max="0.50" step="0.05" value="0.30">
+                </div>
+                <div class="control-group" style="margin-top:4px;">
+                    <label>Material:</label>
+                    <select id="mat1">
+                        <option value="metal">Metal Pulido (7800 kg/m³)</option>
+                        <option value="madera" selected>Madera Natural (650 kg/m³)</option>
+                        <option value="piedra">Piedra / Granito (2500 kg/m³)</option>
+                    </select>
+                </div>
+                <div class="stats-grid">
+                    <div>Masa: <span id="m1Stat">--</span></div>
+                    <div>Inercia (I): <span id="i1Stat">--</span></div>
+                    <div>Velocidad: <span id="v1Stat">0.00</span></div>
+                    <div>E. Rotacional: <span id="e1Stat">0.00 J</span></div>
+                </div>
+            </div>
+
+            <div class="sphere-card orange">
+                <div class="sphere-title" style="color:#fb923c;"><span>Objeto 2 (Naranja)</span></div>
+                <div class="control-group">
+                    <label>Radio / Volumen: <span class="val-badge" id="r2Val">0.40</span> m</label>
+                    <input type="range" id="r2Range" min="0.10" max="0.50" step="0.05" value="0.40">
+                </div>
+                <div class="control-group" style="margin-top:4px;">
+                    <label>Material:</label>
+                    <select id="mat2">
+                        <option value="metal" selected>Metal Pulido (7800 kg/m³)</option>
+                        <option value="madera">Madera Natural (650 kg/m³)</option>
+                        <option value="piedra">Piedra / Granito (2500 kg/m³)</option>
+                    </select>
+                </div>
+                <div class="stats-grid">
+                    <div>Masa: <span id="m2Stat">--</span></div>
+                    <div>Inercia (I): <span id="i2Stat">--</span></div>
+                    <div>Velocidad: <span id="v2Stat">0.00</span></div>
+                    <div>E. Rotacional: <span id="e2Stat">0.00 J</span></div>
+                </div>
+            </div>
+
+            <div class="action-btns">
+                <button class="btn btn-primary" id="startBtn">▶ Iniciar</button>
+                <button class="btn btn-secondary" id="pauseBtn">⏸ Pausa</button>
+                <button class="btn btn-danger" id="stopBtn">⏹ Apagar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="data-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <h3 style="margin:0; color:#4cc9f0; font-size:0.95rem;">📊 Análisis de Datos</h3>
+                <label style="margin:0;">Estudiar:
+                    <select id="variableSelector" style="width:auto; display:inline-block; padding:3px 6px; margin-left:4px;">
+                        <option value="v_t">Velocidad vs. Tiempo</option>
+                        <option value="e_t">Energía Rotacional vs. Tiempo</option>
+                        <option value="a_t">Aceleración vs. Tiempo</option>
+                        <option value="i_t">Momento de Inercia (I) vs. Tiempo</option>
+                        <option value="v_i">Velocidad vs. Momento de Inercia (I)</option>
+                        <option value="e_i">Energía Rotacional vs. Momento de Inercia (I)</option>
+                    </select>
+                </label>
+            </div>
+            <button class="btn btn-secondary" onclick="exportCSV()" style="padding:4px 10px; font-size:0.75rem; flex:none;">📥 Exportar CSV</button>
+        </div>
+
+        <div class="data-grid">
+            <div>
+                <label style="margin-bottom:4px; display:block; font-weight:600; color:#4cc9f0; font-size:0.75rem;" id="graphTitle">Gráfica: Velocidad vs. Tiempo</label>
+                <canvas id="graphCanvas" width="520" height="180"></canvas>
+            </div>
+
+            <div>
+                <label style="margin-bottom:4px; display:block; font-size:0.75rem;">Tabla Comparativa por Segundo</label>
+                <div class="table-container">
+                    <table id="dataTable">
+                        <thead>
+                            <tr id="tableHeader">
+                                <th>t (s)</th>
+                                <th>I₁ (kg·m²)</th>
+                                <th>I₂ (kg·m²)</th>
+                                <th style="color:#38bdf8;">Vel. Obj 1</th>
+                                <th style="color:#fb923c;">Vel. Obj 2</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <tr><td colspan="5" style="text-align:center; color:var(--text-sub);">Presiona "Iniciar" para registrar datos</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const graphCanvas = document.getElementById('graphCanvas');
+        const gCtx = graphCanvas.getContext('2d');
+
+        const angleRange = document.getElementById('angleRange');
+        const angleVal = document.getElementById('angleVal');
+        const torqueRange = document.getElementById('torqueRange');
+        const torqueVal = document.getElementById('torqueVal');
+        const airToggle = document.getElementById('airFrictionToggle');
+        
+        const r1Range = document.getElementById('r1Range');
+        const r1Val = document.getElementById('r1Val');
+        const mat1Select = document.getElementById('mat1');
+        
+        const r2Range = document.getElementById('r2Range');
+        const r2Val = document.getElementById('r2Val');
+        const mat2Select = document.getElementById('mat2');
+
+        const variableSelector = document.getElementById('variableSelector');
+        const graphTitle = document.getElementById('graphTitle');
+        const tableHeader = document.getElementById('tableHeader');
+
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusTag = document.getElementById('statusTag');
+        const tableBody = document.getElementById('tableBody');
+
+        const materialData = {
+            metal: { cd: 0.47, density: 7800, label: 'Metal' },
+            madera: { cd: 0.55, density: 650, label: 'Madera' },
+            piedra: { cd: 0.65, density: 2500, label: 'Piedra' }
+        };
+
+        const g = 9.81;
+        const rhoAir = 1.225;
+
+        let currentMode = 1; 
+        let isRunning = false;
+        let isPaused = false;
+        let simTime = 0;
+        let lastSampleTime = -1;
+        let currentRampLength = 500;
+        let lastFrameTime = performance.now();
+
+        let obj1 = { s: 0, v: 0, w: 0, a: 0, r: 0.3, mat: 'madera', color: '#38bdf8' };
+        let obj2 = { s: 0, v: 0, w: 0, a: 0, r: 0.4, mat: 'metal', color: '#fb923c' };
+
+        let dataHistory = [];
+
+        const modelsDict = {
+            1: { 
+                v_t: "v(t) = v₀ + a·t | a = (m·g·sinθ - F_drag) / (m + I/r²)",
+                e_t: "E_rot = ½·I·(v/r)²",
+                a_t: "a = (m·g·sinθ - F_drag) / (m + I/r²)",
+                i_t: "I = ⅖·m·r²",
+                v_i: "v vs. I (I = ⅖·m·r²)",
+                e_i: "E_rot vs. I (E_rot = ½·I·ω²)"
+            },
+            2: { 
+                v_t: "ω(t) = max(0, ω₀ - α·t)",
+                e_t: "E_rot = ½·I·ω²",
+                a_t: "α = T_drag / I | T_drag = ½·ρ·(ωr)²·C_d·A·r",
+                i_t: "I = ⅖·m·r²",
+                v_i: "ω vs. I (I = ⅖·m·r²)",
+                e_i: "E_rot vs. I (E_rot = ½·I·ω²)"
+            }
+        };
+
+        angleRange.addEventListener('input', (e) => angleVal.innerText = e.target.value);
+        torqueRange.addEventListener('input', (e) => torqueVal.innerText = e.target.value);
+        r1Range.addEventListener('input', (e) => { r1Val.innerText = parseFloat(e.target.value).toFixed(2); updateStaticStats(); });
+        r2Range.addEventListener('input', (e) => { r2Val.innerText = parseFloat(e.target.value).toFixed(2); updateStaticStats(); });
+        mat1Select.addEventListener('change', updateStaticStats);
+        mat2Select.addEventListener('change', updateStaticStats);
+        variableSelector.addEventListener('change', () => { updateTableUI(); drawGraph(); });
+
+        startBtn.addEventListener('click', () => { if (!isRunning) startSimulation(); else resetSimulation(); });
+        pauseBtn.addEventListener('click', () => {
+            if (!isRunning) return;
+            isPaused = !isPaused;
+            pauseBtn.innerText = isPaused ? "▶ Reanudar" : "⏸ Pausa";
+            statusTag.innerText = isPaused ? "En Pausa" : "En Ejecución";
+            statusTag.className = isPaused ? "status-tag status-stopped" : "status-tag status-running";
+        });
+        stopBtn.addEventListener('click', stopSimulation);
+
+        function updateStaticStats() {
+            obj1.r = parseFloat(r1Range.value);
+            obj1.mat = mat1Select.value;
+            obj2.r = parseFloat(r2Range.value);
+            obj2.mat = mat2Select.value;
+
+            let m1 = (4/3) * Math.PI * Math.pow(obj1.r, 3) * materialData[obj1.mat].density;
+            let I1 = (2/5) * m1 * Math.pow(obj1.r, 2);
+            document.getElementById('m1Stat').innerText = m1.toFixed(1) + " kg";
+            document.getElementById('i1Stat').innerText = I1.toFixed(3);
+
+            let m2 = (4/3) * Math.PI * Math.pow(obj2.r, 3) * materialData[obj2.mat].density;
+            let I2 = (2/5) * m2 * Math.pow(obj2.r, 2);
+            document.getElementById('m2Stat').innerText = m2.toFixed(1) + " kg";
+            document.getElementById('i2Stat').innerText = I2.toFixed(3);
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.getElementById('tab1').className = mode === 1 ? 'tab-btn active' : 'tab-btn';
+            document.getElementById('tab2').className = mode === 2 ? 'tab-btn active' : 'tab-btn';
+            document.getElementById('controlsMode1').style.display = mode === 1 ? 'block' : 'none';
+            document.getElementById('controlsMode2').style.display = mode === 2 ? 'block' : 'none';
+            document.getElementById('simTitle').innerText = mode === 1 ? 'Visualización: Plano Inclinado' : 'Visualización: Rotor / Péndulo Torsional';
+            resetSimulation();
+        }
+
+        function resetSimulation() {
+            isRunning = false;
+            isPaused = false;
+            simTime = 0;
+            lastSampleTime = -1;
+            
+            startBtn.innerText = "▶ Iniciar";
+            pauseBtn.innerText = "⏸ Pausa";
+            statusTag.innerText = "Listo para Iniciar";
+            statusTag.className = "status-tag status-ready";
+
+            obj1.s = 0; obj1.v = 0; obj1.w = 0; obj1.a = 0;
+            obj2.s = 0; obj2.v = 0; obj2.w = 0; obj2.a = 0;
+
+            updateStaticStats();
+
+            document.getElementById('v1Stat').innerText = currentMode === 1 ? "0.00 m/s" : "0.00 rad/s";
+            document.getElementById('v2Stat').innerText = currentMode === 1 ? "0.00 m/s" : "0.00 rad/s";
+            document.getElementById('e1Stat').innerText = "0.00 J";
+            document.getElementById('e2Stat').innerText = "0.00 J";
+
+            dataHistory = [];
+            tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-sub);">Presiona "Iniciar" para registrar datos</td></tr>`;
+            
+            drawGraph();
+        }
+
+        function startSimulation() {
+            resetSimulation();
+            isRunning = true;
+            statusTag.innerText = "En Ejecución";
+            statusTag.className = "status-tag status-running";
+            startBtn.innerText = "🔄 Reiniciar";
+            
+            if (currentMode === 2) {
+                let torque = parseFloat(torqueRange.value);
+                let m1 = (4/3) * Math.PI * Math.pow(obj1.r, 3) * materialData[obj1.mat].density;
+                let I1 = (2/5) * m1 * Math.pow(obj1.r, 2);
+                obj1.w = torque / (I1 * 0.5);
+
+                let m2 = (4/3) * Math.PI * Math.pow(obj2.r, 3) * materialData[obj2.mat].density;
+                let I2 = (2/5) * m2 * Math.pow(obj2.r, 2);
+                obj2.w = torque / (I2 * 0.5);
+            }
+
+            tableBody.innerHTML = "";
+            recordDataPoint(0);
+        }
+
+        function stopSimulation() {
+            isRunning = false;
+            isPaused = false;
+            statusTag.innerText = "Apagado / Detenido";
+            statusTag.className = "status-tag status-stopped";
+            pauseBtn.innerText = "⏸ Pausa";
+        }
+
+        function recordDataPoint(t) {
+            let m1 = (4/3) * Math.PI * Math.pow(obj1.r, 3) * materialData[obj1.mat].density;
+            let I1 = (2/5) * m1 * Math.pow(obj1.r, 2);
+            let m2 = (4/3) * Math.PI * Math.pow(obj2.r, 3) * materialData[obj2.mat].density;
+            let I2 = (2/5) * m2 * Math.pow(obj2.r, 2);
+
+            let v1 = currentMode === 1 ? obj1.v : obj1.w;
+            let v2 = currentMode === 1 ? obj2.v : obj2.w;
+
+            let eRot1 = 0.5 * I1 * (currentMode === 1 ? Math.pow(obj1.v / obj1.r, 2) : Math.pow(obj1.w, 2));
+            let eRot2 = 0.5 * I2 * (currentMode === 1 ? Math.pow(obj2.v / obj2.r, 2) : Math.pow(obj2.w, 2));
+
+            dataHistory.push({ t, v1, v2, I1, I2, eRot1, eRot2, a1: obj1.a, a2: obj2.a });
+
+            updateTableUI();
+            drawGraph();
+        }
+
+        function updateTableUI() {
+            if (dataHistory.length === 0) return;
+            const mode = variableSelector.value;
+            let unit = currentMode === 1 ? "m/s" : "rad/s";
+            let accelUnit = currentMode === 1 ? "m/s²" : "rad/s²";
+
+            if (mode.startsWith("v")) {
+                tableHeader.innerHTML = `<th>t (s)</th><th>I₁ (kg·m²)</th><th>I₂ (kg·m²)</th><th style="color:#38bdf8;">Vel. Obj 1</th><th style="color:#fb923c;">Vel. Obj 2</th>`;
+            } else if (mode.startsWith("e")) {
+                tableHeader.innerHTML = `<th>t (s)</th><th>I₁ (kg·m²)</th><th>I₂ (kg·m²)</th><th style="color:#38bdf8;">E.Rot 1 (J)</th><th style="color:#fb923c;">E.Rot 2 (J)</th>`;
+            } else if (mode === "i_t") {
+                tableHeader.innerHTML = `<th>t (s)</th><th style="color:#38bdf8;">I₁ (kg·m²)</th><th style="color:#fb923c;">I₂ (kg·m²)</th><th style="color:#38bdf8;">Mat. Obj 1</th><th style="color:#fb923c;">Mat. Obj 2</th>`;
+            } else {
+                tableHeader.innerHTML = `<th>t (s)</th><th>I₁ (kg·m²)</th><th>I₂ (kg·m²)</th><th style="color:#38bdf8;">Acel 1 (${accelUnit})</th><th style="color:#fb923c;">Acel 2 (${accelUnit})</th>`;
+            }
+
+            let html = "";
+            dataHistory.forEach(d => {
+                let val1 = mode.startsWith("v") ? d.v1.toFixed(2) + " " + unit : (mode.startsWith("e") ? d.eRot1.toFixed(1) + " J" : (mode === "i_t" ? materialData[obj1.mat].label : d.a1.toFixed(3) + " " + accelUnit));
+                let val2 = mode.startsWith("v") ? d.v2.toFixed(2) + " " + unit : (mode.startsWith("e") ? d.eRot2.toFixed(1) + " J" : (mode === "i_t" ? materialData[obj2.mat].label : d.a2.toFixed(3) + " " + accelUnit));
+
+                html += `<tr>
+                    <td style="font-weight:bold; color:#4cc9f0;">${d.t}s</td>
+                    <td>${d.I1.toFixed(3)}</td>
+                    <td>${d.I2.toFixed(3)}</td>
+                    <td>${val1}</td>
+                    <td>${val2}</td>
+                </tr>`;
+            });
+
+            tableBody.innerHTML = html;
+            let container = document.querySelector('.table-container');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function updatePhysics(dt) {
+            if (!isRunning || isPaused) return;
+
+            simTime += dt;
+            const useAir = airToggle.checked;
+
+            if (currentMode === 1) {
+                const theta = parseFloat(angleRange.value) * (Math.PI / 180);
+                
+                let m1 = (4/3) * Math.PI * Math.pow(obj1.r, 3) * materialData[obj1.mat].density;
+                let I1 = (2/5) * m1 * Math.pow(obj1.r, 2);
+                let A1 = Math.PI * Math.pow(obj1.r, 2);
+                let F_drag1 = useAir ? 0.5 * rhoAir * Math.pow(obj1.v, 2) * materialData[obj1.mat].cd * A1 : 0;
+                let net1 = (m1 * g * Math.sin(theta)) - F_drag1;
+                obj1.a = Math.max(0, net1 / (m1 + (I1 / Math.pow(obj1.r, 2))));
+                obj1.v += obj1.a * dt;
+                obj1.s += obj1.v * dt;
+
+                let m2 = (4/3) * Math.PI * Math.pow(obj2.r, 3) * materialData[obj2.mat].density;
+                let I2 = (2/5) * m2 * Math.pow(obj2.r, 2);
+                let A2 = Math.PI * Math.pow(obj2.r, 2);
+                let F_drag2 = useAir ? 0.5 * rhoAir * Math.pow(obj2.v, 2) * materialData[obj2.mat].cd * A2 : 0;
+                let net2 = (m2 * g * Math.sin(theta)) - F_drag2;
+                obj2.a = Math.max(0, net2 / (m2 + (I2 / Math.pow(obj2.r, 2))));
+                obj2.v += obj2.a * dt;
+                obj2.s += obj2.v * dt;
+
+                let finishLine = currentRampLength - 35;
+                if (obj1.s >= finishLine && obj2.s >= finishLine) {
+                    obj1.s = finishLine;
+                    obj2.s = finishLine;
+                    obj1.v = 0; obj2.v = 0;
+                    isRunning = false;
+                    statusTag.innerText = "Carrera Finalizada 🏁";
+                    statusTag.className = "status-tag status-finished";
+                    startBtn.innerText = "▶ Iniciar";
+                }
+
+            } else {
+                let m1 = (4/3) * Math.PI * Math.pow(obj1.r, 3) * materialData[obj1.mat].density;
+                let I1 = (2/5) * m1 * Math.pow(obj1.r, 2);
+                let A1 = Math.PI * Math.pow(obj1.r, 2);
+                let T_drag1 = useAir ? 0.5 * rhoAir * Math.pow(obj1.w * obj1.r, 2) * materialData[obj1.mat].cd * A1 * obj1.r : 0.05;
+                let alpha1 = T_drag1 / I1;
+                obj1.a = alpha1;
+                obj1.w = Math.max(0, obj1.w - alpha1 * dt);
+                obj1.s += obj1.w * dt;
+
+                let m2 = (4/3) * Math.PI * Math.pow(obj2.r, 3) * materialData[obj2.mat].density;
+                let I2 = (2/5) * m2 * Math.pow(obj2.r, 2);
+                let A2 = Math.PI * Math.pow(obj2.r, 2);
+                let T_drag2 = useAir ? 0.5 * rhoAir * Math.pow(obj2.w * obj2.r, 2) * materialData[obj2.mat].cd * A2 * obj2.r : 0.05;
+                let alpha2 = T_drag2 / I2;
+                obj2.a = alpha2;
+                obj2.w = Math.max(0, obj2.w - alpha2 * dt);
+                obj2.s += obj2.w * dt;
+
+                if (obj1.w <= 0 && obj2.w <= 0) {
+                    isRunning = false;
+                    statusTag.innerText = "Simulación Detenida 🏁";
+                    statusTag.className = "status-tag status-finished";
+                    startBtn.innerText = "▶ Iniciar";
+                }
+            }
+
+            let currentSecond = Math.floor(simTime);
+            if (currentSecond > lastSampleTime && isRunning) {
+                lastSampleTime = currentSecond;
+                if (currentSecond > 0) recordDataPoint(currentSecond);
+            }
+
+            document.getElementById('v1Stat').innerText = (currentMode === 1 ? obj1.v.toFixed(2) + " m/s" : obj1.w.toFixed(2) + " rad/s");
+            document.getElementById('v2Stat').innerText = (currentMode === 1 ? obj2.v.toFixed(2) + " m/s" : obj2.w.toFixed(2) + " rad/s");
+            
+            let m1 = (4/3) * Math.PI * Math.pow(obj1.r, 3) * materialData[obj1.mat].density;
+            let I1 = (2/5) * m1 * Math.pow(obj1.r, 2);
+            let e1 = 0.5 * I1 * Math.pow(currentMode === 1 ? obj1.v / obj1.r : obj1.w, 2);
+            document.getElementById('e1Stat').innerText = e1.toFixed(1) + " J";
+
+            let m2 = (4/3) * Math.PI * Math.pow(obj2.r, 3) * materialData[obj2.mat].density;
+            let I2 = (2/5) * m2 * Math.pow(obj2.r, 2);
+            let e2 = 0.5 * I2 * Math.pow(currentMode === 1 ? obj2.v / obj2.r : obj2.w, 2);
+            document.getElementById('e2Stat').innerText = e2.toFixed(1) + " J";
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (currentMode === 1) {
+                const theta = parseFloat(angleRange.value) * (Math.PI / 180);
+                const maxR = Math.max(obj1.r, obj2.r) * 45;
+                const endX = canvas.width - 40;
+                const endY = canvas.height - 30;
+                const maxL = (canvas.width - 100) / Math.cos(theta);
+                const maxL_Y = (canvas.height - maxR - 50) / Math.sin(theta);
+                currentRampLength = Math.min(maxL, maxL_Y);
+
+                const startX = endX - currentRampLength * Math.cos(theta);
+                const startY = endY - currentRampLength * Math.sin(theta);
+
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.lineTo(endX, endY + 12);
+                ctx.lineTo(startX, endY + 12);
+                ctx.fillStyle = '#1c2541';
+                ctx.fill();
+                ctx.strokeStyle = '#3a86ef';
+                ctx.stroke();
+
+                let x1 = startX + Math.min(obj1.s, currentRampLength - 30) * Math.cos(theta);
+                let y1 = startY + Math.min(obj1.s, currentRampLength - 30) * Math.sin(theta) - (obj1.r * 45);
+                drawSphere(x1, y1, obj1.r * 45, obj1.color, obj1.s, materialData[obj1.mat].label);
+
+                let x2 = startX + Math.min(obj2.s, currentRampLength - 30) * Math.cos(theta);
+                let y2 = startY + Math.min(obj2.s, currentRampLength - 30) * Math.sin(theta) - (obj2.r * 45);
+                drawSphere(x2, y2, obj2.r * 45, obj2.color, obj2.s, materialData[obj2.mat].label);
+
+            } else {
+                let cx1 = canvas.width / 3;
+                let cx2 = (canvas.width / 3) * 2;
+                let cy = canvas.height / 2;
+
+                ctx.strokeStyle = '#475569';
+                ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.moveTo(cx1, 40); ctx.lineTo(cx1, canvas.height - 40); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx2, 40); ctx.lineTo(cx2, canvas.height - 40); ctx.stroke();
+
+                drawSphere(cx1, cy, obj1.r * 60, obj1.color, obj1.s, materialData[obj1.mat].label);
+                drawSphere(cx2, cy, obj2.r * 60, obj2.color, obj2.s, materialData[obj2.mat].label);
+            }
+        }
+
+        function drawSphere(x, y, radius, color, rotDistance, label) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            ctx.beginPath();
+            ctx.arc(2, 2, radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            ctx.fill();
+
+            let grad = ctx.createRadialGradient(-radius*0.3, -radius*0.3, radius*0.1, 0, 0, radius);
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(0.3, color);
+            grad.addColorStop(1, '#000000');
+
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            let angleRot = rotDistance / (radius / 45);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(radius * Math.cos(angleRot), radius * Math.sin(angleRot));
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.restore();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, x, y - radius - 8);
+        }
+
+        function drawGraph() {
+            gCtx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
+            const w = graphCanvas.width;
+            const h = graphCanvas.height;
+            const pad = 35;
+
+            const modeKey = variableSelector.value;
+            let modeTitle = variableSelector.options[variableSelector.selectedIndex].text;
+            let mathModel = modelsDict[currentMode][modeKey] || "";
+
+            graphTitle.innerText = `Gráfica: ${modeTitle} | Modelo: ${mathModel}`;
+
+            gCtx.strokeStyle = '#2b2d42';
+            gCtx.lineWidth = 1;
+            gCtx.beginPath();
+            gCtx.moveTo(pad, 10); gCtx.lineTo(pad, h - pad); gCtx.lineTo(w - 10, h - pad);
+            gCtx.stroke();
+
+            if (dataHistory.length < 1) return;
+
+            gCtx.fillStyle = obj1.color; gCtx.beginPath(); gCtx.arc(w - 70, 15, 4, 0, Math.PI*2); gCtx.fill();
+            gCtx.fillStyle = '#fff'; gCtx.font = '9px sans-serif'; gCtx.fillText('Obj 1', w - 60, 18);
+
+            gCtx.fillStyle = obj2.color; gCtx.beginPath(); gCtx.arc(w - 35, 15, 4, 0, Math.PI*2); gCtx.fill();
+            gCtx.fillStyle = '#fff'; gCtx.fillText('Obj 2', w - 25, 18);
+
+            let maxT = dataHistory[dataHistory.length - 1].t || 1;
+            let maxVal = 1;
+
+            dataHistory.forEach(d => {
+                let v1 = modeKey.startsWith("v") ? d.v1 : (modeKey.startsWith("e") ? d.eRot1 : (modeKey === "i_t" ? d.I1 : d.a1));
+                let v2 = modeKey.startsWith("v") ? d.v2 : (modeKey.startsWith("e") ? d.eRot2 : (modeKey === "i_t" ? d.I2 : d.a2));
+                if (v1 > maxVal) maxVal = v1;
+                if (v2 > maxVal) maxVal = v2;
+            });
+
+            maxVal *= 1.1;
+
+            gCtx.strokeStyle = obj1.color;
+            gCtx.lineWidth = 2;
+            gCtx.beginPath();
+            dataHistory.forEach((d, idx) => {
+                let val1 = modeKey.startsWith("v") ? d.v1 : (modeKey.startsWith("e") ? d.eRot1 : (modeKey === "i_t" ? d.I1 : d.a1));
+                let px = pad + (d.t / maxT) * (w - pad - 15);
+                let py = (h - pad) - (val1 / maxVal) * (h - pad - 15);
+                if (idx === 0) gCtx.moveTo(px, py); else gCtx.lineTo(px, py);
+            });
+            gCtx.stroke();
+
+            gCtx.strokeStyle = obj2.color;
+            gCtx.lineWidth = 2;
+            gCtx.beginPath();
+            dataHistory.forEach((d, idx) => {
+                let val2 = modeKey.startsWith("v") ? d.v2 : (modeKey.startsWith("e") ? d.eRot2 : (modeKey === "i_t" ? d.I2 : d.a2));
+                let px = pad + (d.t / maxT) * (w - pad - 15);
+                let py = (h - pad) - (val2 / maxVal) * (h - pad - 15);
+                if (idx === 0) gCtx.moveTo(px, py); else gCtx.lineTo(px, py);
+            });
+            gCtx.stroke();
+        }
+
+        function exportCSV() {
+            if (dataHistory.length === 0) {
+                alert("No hay datos registrados para exportar. Ejecuta la simulación primero.");
+                return;
+            }
+            let csv = "Tiempo (s),Inercia 1 (kg*m2),Inercia 2 (kg*m2),Velocidad 1,Velocidad 2,Energia Rot 1 (J),Energia Rot 2 (J)\n";
+            dataHistory.forEach(d => {
+                csv += `${d.t},${d.I1.toFixed(4)},${d.I2.toFixed(4)},${d.v1.toFixed(3)},${d.v2.toFixed(3)},${d.eRot1.toFixed(2)},${d.eRot2.toFixed(2)}\n`;
+            });
+
+            let blob = new Blob([csv], { type: 'text/csv' });
+            let url = window.URL.createObjectURL(blob);
+            let a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `simulacion_datos_modo${currentMode}.csv`);
+            a.click();
+        }
+
+        function loop(timestamp) {
+            let dt = (timestamp - lastFrameTime) / 1000;
+            if (dt > 0.1) dt = 0.1; 
+            lastFrameTime = timestamp;
+
+            updatePhysics(dt);
+            draw();
+
+            requestAnimationFrame(loop);
+        }
+
+        updateStaticStats();
+        drawGraph();
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
+
